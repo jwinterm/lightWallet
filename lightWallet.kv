@@ -1,0 +1,332 @@
+#:kivy 1.8.0
+
+<RootWidget>:
+    id: rootwidget
+    # Tx history tab id items
+    tx_list: tx_list
+    # Transfer tab id items
+    address_input_textinput: address_input_textinput
+    amount_input_textinput: amount_input_textinput
+    mixin_input_textinput: mixin_input_textinput
+    paymentid_input_textinput: paymentid_input_textinput
+    # Wallet account tab id items
+    wallet_account_label: wallet_account_label
+    wallet_address_label: wallet_address_label
+    wallet_block_label: wallet_block_label
+    unlocked_balance_label: unlocked_balance_label
+    total_balance_label: total_balance_label
+    calculated_balance_label: calculated_balance_label
+    # Bitmonerod daemon tab id items
+    daemon_server_textinput: daemon_server_textinput
+    blockheight_label: blockheight_label
+    last_reward_label: last_reward_label
+    last_block_time_label: last_block_time_label
+    time_since_last_label: time_since_last_label
+
+    AccordionItem:
+        title: "Transaction history"
+        ScrollView:
+            size_hint: None, None
+            GridLayout:
+                cols: 1
+                spacing: 7
+                # size_hint_y: None
+                id: tx_list
+
+    AccordionItem:
+        title: "Send XMR"
+        BoxLayout:
+            padding: 30, 30, 30, 30
+            orientation: 'vertical'
+            Label:
+                text: "Send to address:"
+                size_hint_x: 0.2
+            TextInput:
+                id: address_input_textinput
+                size_hint_x: 2
+                font_size: 10
+                multiline: False
+            Label:
+                text: "Amount MRO:"
+                size_hint_x: 0.2
+            TextInput:
+                id: amount_input_textinput
+                size_hint_x: 0.8
+                font_size: 10
+                multiline: False
+            Label:
+                text: "Mixin amount:\n(Please use 0 or >= 3)"
+                size_hint_x: 0.2
+            TextInput:
+                id: mixin_input_textinput
+                size_hint_x: 0.8
+                font_size: 10
+                multiline: False
+            Label:
+                text: "Payment ID:"
+                size_hint_x: 0.2
+            TextInput:
+                id: paymentid_input_textinput
+                size_hint_x: 1
+                font_size: 10
+                text: ""
+                multiline: False
+            Button:
+                text: "Transfer funds"
+                on_press: root.transferfunds()
+                # on_press: root.storeformdata()
+                font_size: 20
+
+    AccordionItem:
+        title: "Simplewallet account"
+        BoxLayout:
+            orientation: 'vertical'
+            padding: 30, 30, 30, 30
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Account name: "
+                MarkupLabel:
+                    id: wallet_account_label
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    size_hint_x: 0.15
+                    text: "Address: "
+                MarkupLabel:
+                    id: wallet_address_label
+                    size_hint_x: 0.9
+                    font_size: 9
+                    on_ref_press: root.selectAddress()
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Blocks synced: "
+                MarkupLabel:
+                    id: wallet_block_label
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Unlocked balance: "
+                MarkupLabel:
+                    id: unlocked_balance_label
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Total balance: "
+                MarkupLabel:
+                    id: total_balance_label
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Calculated balance: "
+                MarkupLabel:
+                    id: calculated_balance_label
+
+    AccordionItem:
+        title: "Bitmonerod daemon"
+        BoxLayout:
+            orientation: 'vertical'
+            padding: 30, 30, 30, 30
+            Image:
+                size_hint_y: 0.2
+                source: 'logo.png'
+            Label:
+                size_hint_y: 0.05
+                text: "A lightweight Monero GUI account manager"
+            Label:
+                size_hint_y: 0.1
+            Label:
+                text: "Daemon ip address (default is coolmining club)"
+                size_hint_y: 0.05
+            BoxLayout:
+                size_hint_y: 0.15
+                orientation: 'horizontal'
+                TextInput:
+                    size_hint_x: 0.7
+                    id: daemon_server_textinput
+                    text: "http://xmr1.coolmining.club:5012"
+                    # text: "http://localhost:18081"
+                Button:
+                    text: "Click to change\ndaemon address"
+            Label:
+                size_hint_y: 0.1
+            BoxLayout:
+                size_hint_y: 0.05
+                orientation: 'horizontal'
+                Label:
+                    text: 'Blockchain height:'
+                MarkupLabel:
+                    id: blockheight_label
+            BoxLayout:
+                size_hint_y: 0.05
+                orientation: 'horizontal'
+                Label:
+                    text: 'Last block reward:'
+                MarkupLabel:
+                    id: last_reward_label
+            BoxLayout:
+                size_hint_y: 0.05
+                orientation: 'horizontal'
+                Label:
+                    text: 'Last block time:'
+                MarkupLabel:
+                    id: last_block_time_label
+            BoxLayout:
+                size_hint_y: 0.05
+                orientation: 'horizontal'
+                Label:
+                    text: 'Time since last block:'
+                MarkupLabel:
+                    id: time_since_last_label
+
+
+<InitialPopup>:
+    id: initial_popup
+    title: "Initial Setup Window"
+    auto_dismiss: "False"
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: "It appears that this is your first time loading CryptoNote Kivy GUI\n(or you have deleted your CONFIG.file file).\nPlease select if you would like to create a new wallet, load an existing wallet, or exit the program"
+        BoxLayout:
+            orientation: 'horizontal'
+            padding: 30, 20, 30, 20
+            Button:
+                text: "Create\nNew\nWallet"
+                on_press: root.createWalletPopup()
+            Button:
+                text: "Load\nExisting\nWallet"
+                on_press: root.loadWalletPopup()
+            Button:
+                text: "Exit KivyWallet"
+                on_press: root.quit()
+
+
+<CreateWalletPopup>:
+    id: create_wallet_popup
+    title: "Create Wallet Window"
+    auto_dismiss: "False"
+    wallet_name: wallet_name
+    wallet_pw: wallet_pw
+    repeat_wallet_pw: repeat_wallet_pw
+    BoxLayout:
+        padding: 60, 60, 60, 60
+        orientation: 'vertical'
+        Label:
+            text: "Enter wallet name:"
+        TabTextInput:
+            id: wallet_name
+            next: wallet_pw
+        Label:
+            text: "Enter wallet password:"
+        TabTextInput:
+            id: wallet_pw
+            password: True
+            next: repeat_wallet_pw
+        Label:
+            text: "Repeat wallet password:"
+        TabTextInput:
+            id: repeat_wallet_pw
+            password: True
+            next: wallet_pw
+        Button:
+            text: "Click to create wallet"
+            on_press: root.createWallet()
+
+
+<LoadWalletPopup>:
+    id: load_wallet_popup
+    title: "Load Wallet Window"
+    auto_dismiss: "False"
+    wallet_path: wallet_path
+    wallet_pw: wallet_pw
+    repeat_wallet_pw: repeat_wallet_pw
+    BoxLayout:
+        padding: 60, 60, 60, 60
+        orientation: 'vertical'
+        MarkupLabel:
+            text: "Enter wallet keys path (make sure you include file extension)\nExample - [b][color=00ffff]C:\\Users\\Satoshi\\SecretStuff\\Wallets\\Monero\\wallet.bin.keys[/b][/color]:"
+        TabTextInput:
+            id: wallet_path
+            next: wallet_pw
+        Label:
+            text: "Enter wallet password:"
+        TabTextInput:
+            id: wallet_pw
+            password: True
+            next: repeat_wallet_pw
+        Label:
+            text: "Repeat wallet password:"
+        TabTextInput:
+            id: repeat_wallet_pw
+            password: True
+            next: wallet_path
+        Label:
+            text: "Note - this wallet will be set as your default wallet"
+        Button:
+            text: "Click to load wallet"
+            on_press: root.loadWallet()
+
+
+<PasswordPopup>
+    title: "Password entry popup"
+    walletname_label: walletname_label
+    wallet_pw: wallet_pw
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            id: walletname_label
+        TabTextInput:
+            id: wallet_pw
+            password: True
+        Button:
+            text: "Click to launch wallet"
+            on_press: root.launchWallet()
+
+
+<TransferPopup>
+    transfer_popup_label: transfer_popup_label
+    size_hint: 0.75, 0.75
+    auto_dismiss: False
+    title: "Transfer Popup"
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            # text: "are you sure?"
+            id: transfer_popup_label
+            text: ""
+            markup: True
+        BoxLayout:
+            orientation: 'horizontal'
+            Button:
+                text: "Yes, transfer XMR."
+                on_press: root.transfer()
+                on_press: root.dismiss()
+            Button:
+                text: "No, cancel transaction."
+                on_press: root.dismiss()
+
+
+<TxIDPopup>
+    title: "Tx ID Popup"
+    txid_popup_label: txid_popup_label
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            font_size: 11
+            markup: True
+            id: txid_label
+            text: ""
+            on_ref_press: root.selecttxid()
+        Button:
+            text: "OK, dismiss."
+            on_press: root.dismiss()
+
+
+<MarkupLabel>
+    markup: True
+
+
+<TabTextInput>
+    multiline: False
