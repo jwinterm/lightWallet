@@ -541,7 +541,7 @@ class RootWidget(Accordion):
             print("no,no")
 
 
-class KVNewApp(App):
+class lightWalletApp(App):
     def build(self):
         return RootWidget()
 
@@ -549,7 +549,7 @@ class KVNewApp(App):
 if __name__ == '__main__':
     Config.set('kivy', 'exit_on_escape', 0)
     Config.set('kivy', 'window_icon', "./lilicon.ico")
-    KVNewApp().run()
+    lightWalletApp().run()
     try:
         App.get_running_app().root.wallet_process.kill()
     except:
