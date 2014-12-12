@@ -14,12 +14,13 @@ payload = json.dumps({
 
 
 def storeWallet():
-    resp = requests.get(serverURL, headers=headers, data=payload)
     try:
+        resp = requests.get(serverURL, headers=headers, data=payload)
         output = json.loads(resp.text)
-#        print output
     except:
-#        print "Waiting for bitmonerod client to sync with network..."
         output = "Waiting for bitmonerod client to sync with network..."
+    print(output)
+    return output
 
-#    print output
+if __name__ == "__main__":
+    storeWallet()

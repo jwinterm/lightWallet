@@ -3,7 +3,9 @@
 <RootWidget>:
     id: rootwidget
     # Tx history tab id items
-    tx_list: tx_list
+#    tx_list: tx_list
+    # tx_scroller: tx_scroller
+    # scroll_box: scroll_box
     # Transfer tab id items
     address_input_textinput: address_input_textinput
     amount_input_textinput: amount_input_textinput
@@ -16,6 +18,7 @@
     unlocked_balance_label: unlocked_balance_label
     total_balance_label: total_balance_label
     calculated_balance_label: calculated_balance_label
+    wallet_savetime_label: wallet_savetime_label
     # Bitmonerod daemon tab id items
     daemon_server_textinput: daemon_server_textinput
     blockheight_label: blockheight_label
@@ -24,58 +27,118 @@
     time_since_last_label: time_since_last_label
 
     AccordionItem:
+        id: tx_accordion
         title: "Transaction history"
-        ScrollView:
-            size_hint: None, None
-            GridLayout:
-                cols: 1
-                spacing: 7
-                # size_hint_y: None
-                id: tx_list
+        BoxLayout:
+            padding: 30, 30, 30, 30
+            orientation: "vertical"
+            Label:
+                text: "Transaction history list (scrollable)"
+                size_hint_y: 0.1
+            ScrollView:
+                id: tx_scroller
+                size_hint: 1, 1
+                GridLayout:
+                    cols: 1
+                    spacing: 7
+                    size_hint_y: None
+                    id: tx_list
 
     AccordionItem:
         title: "Send XMR"
         BoxLayout:
-            padding: 30, 30, 30, 30
+            padding: 20, 30, 20, 30
             orientation: 'vertical'
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.1
+                Label:
+                    text: "Send to\naddress:"
+                    size_hint_x: 0.15
+                TextInput:
+                    id: address_input_textinput
+                    size_hint_x: 0.85
+                    font_size: 9
+                    multiline: False
             Label:
-                text: "Send to address:"
-                size_hint_x: 0.2
-            TextInput:
-                id: address_input_textinput
-                size_hint_x: 2
-                font_size: 10
-                multiline: False
+                size_hint_y: 0.05
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.1
+                Label:
+                    text: "Amount XMR:"
+                    size_hint_x: 0.4
+                TextInput:
+                    id: amount_input_textinput
+                    size_hint_x: 0.6
+                    font_size: 20
+                    multiline: False
             Label:
-                text: "Amount MRO:"
-                size_hint_x: 0.2
-            TextInput:
-                id: amount_input_textinput
-                size_hint_x: 0.8
-                font_size: 10
-                multiline: False
+                size_hint_y: 0.05
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.1
+                Label:
+                    text: "Mixin amount:\n(Please use 0 or >= 2)"
+                    size_hint_x: 0.4
+                TextInput:
+                    id: mixin_input_textinput
+                    size_hint_x: 0.6
+                    font_size: 20
+                    multiline: False
+#            Slider:
+#                min: 0
+#                max: 10
+#                value: 1
             Label:
-                text: "Mixin amount:\n(Please use 0 or >= 3)"
-                size_hint_x: 0.2
-            TextInput:
-                id: mixin_input_textinput
-                size_hint_x: 0.8
-                font_size: 10
-                multiline: False
+                size_hint_y: 0.05
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.1
+                Label:
+                    text: "Payment ID\n(Needed to send\nto exchanges!):"
+                    size_hint_x: 0.2
+                TextInput:
+                    id: paymentid_input_textinput
+                    size_hint_x: 0.8
+                    font_size: 9
+                    text: ""
+                    multiline: False
             Label:
-                text: "Payment ID:"
-                size_hint_x: 0.2
-            TextInput:
-                id: paymentid_input_textinput
-                size_hint_x: 1
-                font_size: 10
-                text: ""
-                multiline: False
+                size_hint_y: 0.05
             Button:
+                size_hint: 1, 0.15
+                halign: "center"
                 text: "Transfer funds"
                 on_press: root.transferfunds()
                 # on_press: root.storeformdata()
                 font_size: 20
+            Label:
+                size_hint_y: 0.05
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.15
+                MarkupLabel:
+                    size_hint_x: 0.7
+                    halign: "center"
+                    text: "Please donate XMR to Cool Mining Club\nfor generously running a bitmonerod open node."
+                Button:
+                    size_hint_x: 0.3
+                    halign: "center"
+                    text: "Click to\ndonate XMR to\nCool Mining Club"
+                    on_press: root.donate_CMC()
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.15
+                MarkupLabel:
+                    size_hint_x: 0.7
+                    halign: "center"
+                    text: "Please donate XMR to Monero core developers\nfor generously donating their time and effort."
+                Button:
+                    size_hint_x: 0.3
+                    halign: "center"
+                    text: "Click to\ndonate XMR to\ncore Monero devs"
+                    on_press: root.donate_core()
 
     AccordionItem:
         title: "Simplewallet account"
@@ -84,12 +147,14 @@
             padding: 30, 30, 30, 30
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     text: "Account name: "
                 MarkupLabel:
                     id: wallet_account_label
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     size_hint_x: 0.15
                     text: "Address: "
@@ -100,28 +165,46 @@
                     on_ref_press: root.selectAddress()
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     text: "Blocks synced: "
                 MarkupLabel:
                     id: wallet_block_label
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     text: "Unlocked balance: "
                 MarkupLabel:
                     id: unlocked_balance_label
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     text: "Total balance: "
                 MarkupLabel:
                     id: total_balance_label
             BoxLayout:
                 orientation: 'horizontal'
+                size_hint_y: 0.1
                 Label:
                     text: "Calculated balance: "
                 MarkupLabel:
                     id: calculated_balance_label
+            Label:
+                size_hint_y: 0.1
+                text: "*If you can see a number for the Unlocked and Total balances, then it should be OK to transfer XMR.\nSometimes the Blocks synced lags a bit, but if you see your Unlocked and Total balances, transfers should work."
+                font_size: 10
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.25
+                Button:
+                    text: "Save wallet\n(Attempts to autosave\nafter every minute)"
+                    halign: "center"
+                    on_press: root.saveWallet(0.1)
+                MarkupLabel:
+                    id: wallet_savetime_label
+                    text: "Wallet last saved @"
 
     AccordionItem:
         title: "Bitmonerod daemon"
@@ -137,18 +220,23 @@
             Label:
                 size_hint_y: 0.1
             Label:
-                text: "Daemon ip address (default is coolmining club)"
-                size_hint_y: 0.05
+                text: "Daemon ip address (default is Coolmining Club)\nto use a local instance enter http://localhost:18081\nin CONFIG.file in local directory."
+                size_hint_y: 0.1
             BoxLayout:
                 size_hint_y: 0.15
                 orientation: 'horizontal'
-                TextInput:
-                    size_hint_x: 0.7
+                padding: 0, 8, 0, 0
+                MarkupLabel:
+                    size_hint_x: 0.6
+                    color: 0, 1, 0
                     id: daemon_server_textinput
-                    text: "http://xmr1.coolmining.club:5012"
+                    # text: "http://xmr1.coolmining.club:5012"
                     # text: "http://localhost:18081"
                 Button:
-                    text: "Click to change\ndaemon address"
+                    text: "Change daemon\naddress in\nCONFIG.file"
+                    halign: "center"
+                    size_hint_x: 0.4
+                    # on_press: root.resetDaemon()
             Label:
                 size_hint_y: 0.1
             BoxLayout:
@@ -184,22 +272,27 @@
 <InitialPopup>:
     id: initial_popup
     title: "Initial Setup Window"
+    size_hint: 0.75, 0.75
     auto_dismiss: "False"
     BoxLayout:
         orientation: 'vertical'
         Label:
-            text: "It appears that this is your first time loading CryptoNote Kivy GUI\n(or you have deleted your CONFIG.file file).\nPlease select if you would like to create a new wallet, load an existing wallet, or exit the program"
+            halign: "center"
+            text: "It appears that this is your first time loading CryptoNote Kivy GUI\n(or you have deleted your CONFIG.file file).\n\nPlease select if you would like to create a new wallet,\nload an existing wallet, or exit the program."
         BoxLayout:
             orientation: 'horizontal'
             padding: 30, 20, 30, 20
             Button:
+                halign: "center"
                 text: "Create\nNew\nWallet"
                 on_press: root.createWalletPopup()
             Button:
+                halign: "center"
                 text: "Load\nExisting\nWallet"
                 on_press: root.loadWalletPopup()
             Button:
-                text: "Exit KivyWallet"
+                halign: "center"
+                text: "Exit\nlightWallet"
                 on_press: root.quit()
 
 
@@ -207,6 +300,7 @@
     id: create_wallet_popup
     title: "Create Wallet Window"
     auto_dismiss: "False"
+    size_hint: 0.75, 0.75
     wallet_name: wallet_name
     wallet_pw: wallet_pw
     repeat_wallet_pw: repeat_wallet_pw
@@ -238,56 +332,74 @@
 <LoadWalletPopup>:
     id: load_wallet_popup
     title: "Load Wallet Window"
-    auto_dismiss: "False"
+    size_hint: 0.75, 0.75
+    auto_dismiss: False
     wallet_path: wallet_path
     wallet_pw: wallet_pw
     repeat_wallet_pw: repeat_wallet_pw
     BoxLayout:
-        padding: 60, 60, 60, 60
+        padding: 60, 30, 60, 30
         orientation: 'vertical'
         MarkupLabel:
-            text: "Enter wallet keys path (make sure you include file extension)\nExample - [b][color=00ffff]C:\\Users\\Satoshi\\SecretStuff\\Wallets\\Monero\\wallet.bin.keys[/b][/color]:"
+            size_hint_y: 0.3
+            halign: "center"
+            text: "Enter wallet keys path (make sure you include file extension)\nNote: this will copy your keys file to a local subdirectory;\nit will not use your original wallet file(s).\nExample - [b][color=00ffff]C:\\Users\\Satoshi\\SecretStuff\\Wallets\\Monero\\wallet.bin.keys[/b][/color]:"
         TabTextInput:
+            size_hint_y: 0.1
             id: wallet_path
             next: wallet_pw
         Label:
+            size_hint_y: 0.1
             text: "Enter wallet password:"
         TabTextInput:
+            size_hint_y: 0.1
             id: wallet_pw
             password: True
             next: repeat_wallet_pw
         Label:
+            size_hint_y: 0.1
             text: "Repeat wallet password:"
         TabTextInput:
+            size_hint_y: 0.1
             id: repeat_wallet_pw
             password: True
             next: wallet_path
         Label:
+            size_hint_y: 0.1
             text: "Note - this wallet will be set as your default wallet"
         Button:
+            size_hint_y: 0.15
             text: "Click to load wallet"
             on_press: root.loadWallet()
 
 
 <PasswordPopup>
     title: "Password entry popup"
+    size_hint: 0.75, 0.75
+    auto_dismiss: False
     walletname_label: walletname_label
     wallet_pw: wallet_pw
     BoxLayout:
         orientation: "vertical"
+        padding: 20, 20, 20, 20
         Label:
+            size_hint: 1, 0.2
             id: walletname_label
         TabTextInput:
+            size_hint: 1, 0.1
             id: wallet_pw
             password: True
+        Label:
+            size_hint: 1, 0.2
         Button:
             text: "Click to launch wallet"
             on_press: root.launchWallet()
+            size_hint: 1, 0.5
 
 
 <TransferPopup>
     transfer_popup_label: transfer_popup_label
-    size_hint: 0.75, 0.75
+    size_hint: 0.9, 0.9
     auto_dismiss: False
     title: "Transfer Popup"
     BoxLayout:
@@ -310,18 +422,74 @@
 
 <TxIDPopup>
     title: "Tx ID Popup"
+    address_popup_label: address_popup_label
+    paymentid_popup_label: paymentid_popup_label
     txid_popup_label: txid_popup_label
+    size_hint: 0.9, 0.9
     BoxLayout:
         orientation: 'vertical'
-        Label:
-            font_size: 11
-            markup: True
-            id: txid_label
+        padding: 30, 30, 30, 30
+        MarkupLabel:
+            halign: "center"
+            font_size: 9
+            id: address_popup_label
+            text: ""
+            on_ref_press: root.selectaddress()
+        MarkupLabel:
+            halign: "center"
+            font_size: 9
+            id: paymentid_popup_label
+            text: ""
+            on_ref_press: root.selectpaymentid()
+        MarkupLabel:
+            halign: "center"
+            font_size: 9
+            id: txid_popup_label
             text: ""
             on_ref_press: root.selecttxid()
         Button:
             text: "OK, dismiss."
             on_press: root.dismiss()
+
+
+<DonateCMC>
+    title: "Donate to Cool Mining Club"
+    size_hint: 0.75, 0.75
+    donation_amount_CMC: donation_amount_CMC
+    BoxLayout:
+        padding: 30, 30, 30, 30
+        orientation: 'vertical'
+        Label:
+            text: "Enter amount of XMR to donate:"
+        TextInput:
+            id: donation_amount_CMC
+        BoxLayout:
+            Button:
+                text: "Donate!"
+                on_press: root.make_donation()
+            Button:
+                text: "Cancel :("
+                on_press: root.dismiss()
+
+
+<DonateCore>
+    title: "Donate to Monero core devs"
+    size_hint: 0.75, 0.75
+    donation_amount_core: donation_amount_core
+    BoxLayout:
+        padding: 30, 30, 30, 30
+        orientation: 'vertical'
+        Label:
+            text: "Enter amount of XMR to donate:"
+        TextInput:
+            id: donation_amount_core
+        BoxLayout:
+            Button:
+                text: "Donate!"
+                on_press: root.make_donation()
+            Button:
+                text: "Cancel :("
+                on_press: root.dismiss()
 
 
 <MarkupLabel>
