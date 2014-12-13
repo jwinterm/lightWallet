@@ -7,7 +7,7 @@ This is a GUI frontend that runs on top of bitmonerod and simplewallet (in RPC m
 ### Windows, Linux, and Mac
 The requirements for running the program from the source files are: Python 2.7, Kivy 1.8, and pygame 1.9.1. The program is also only intended for windows at the moment; it may be semi-functional on linux or mac, but I don't think it will work properly. If you have these requirements, then you just need to add your binary, simplewallet.exe(currently designed to work only with the latest tagged release),  and optionally wallet files to your cryptonoteRPCwalletGUI folder, or unzip the cryptonoteRPCwalletGUI contents into the folder where you currently have your binaries and wallet files. For the time being they have to be in the same local directory.
 
-If you're using the binary, there are no requirements other than an x64 Windows computer. 
+If you're using the binary (v0.0.1), there are no requirements other than an x64 Windows computer. 
 
 ## Running
 It should be OK to launch the program with an instance of bitmonerod and/or simplewallet running. 
