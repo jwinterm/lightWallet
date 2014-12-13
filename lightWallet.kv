@@ -156,12 +156,14 @@
                 orientation: 'horizontal'
                 size_hint_y: 0.15
                 Label:
-                    size_hint_x: 0.1
+                    size_hint_x: 0.05
                     text: "Address: "
+                Label:
+                    size_hint_x: 0.1
                 MarkupLabel:
                     id: wallet_address_label
                     halign: "center"
-                    size_hint_x: 0.9
+                    size_hint_x: 0.85
                     font_size: 8
                     on_ref_press: root.selectAddress()
             BoxLayout:
