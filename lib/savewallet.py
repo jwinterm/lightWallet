@@ -19,7 +19,7 @@ def storeWallet():
         output = json.loads(resp.text)
     except:
         output = "Waiting for bitmonerod client to sync with network..."
-    print(output)
+    # print(output)
     return output
 
 if __name__ == "__main__":

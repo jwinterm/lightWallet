@@ -185,14 +185,14 @@ class CreateWalletPopup(Popup):
         electrum_coming, electrum_1, electrum_2, electrum_3, electrum_4 = None, None, None, None, None
         wallet_name = self.wallet_name.text
         wallet_pw = self.wallet_pw.text
+        wallet_dir = os.path.join(App.get_running_app().root.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')))
+        wallet_file = os.path.join(wallet_dir, wallet_name)
         if self.wallet_pw.text == self.repeat_wallet_pw.text:
-            if not os.path.exists('./{0}_walletData'.format(wallet_name.replace('.', ''))):
-                os.mkdir('./{0}_walletData'.format(wallet_name.replace('.', '')))
+            if not os.path.exists(wallet_dir):
+                os.mkdir(wallet_dir)
             else:
                 sys.exit(7777)
-            p = Popen(["simplewallet", "--generate-new-wallet",
-                       "./" + wallet_name.replace('.', '') + "_walletData/" + wallet_name,
-                       "--password", wallet_pw, "--set_log", "0"],
+            p = Popen(["simplewallet", "--generate-new-wallet", wallet_file, "--password", wallet_pw, "--set_log", "0"],
                       stdout=PIPE,
                       stdin=PIPE,
                       bufsize=1,
@@ -214,25 +214,21 @@ class CreateWalletPopup(Popup):
                     if electrum_3:
                         electrum_line_4 = line.rstrip()
                         electrum_3 = False
-                        print(line.rstrip())
                     if electrum_2:
                         electrum_line_3 = line.rstrip()
                         electrum_3 = True
                         electrum_2 = False
-                        print(line.rstrip())
                     if electrum_1:
                         electrum_line_2 = line.rstrip()
                         electrum_2 = True
                         electrum_1 = False
-                        print(line.rstrip())
                     if electrum_coming:
                         electrum_1 = True
                         electrum_coming = False
-                        print(line.rstrip())
                     if 130 < len(line.rstrip()) < 350:
                         electrum_coming = True
                         print(line.rstrip())
-                    print("simplewallet output:", line.rstrip())
+                    # print("simplewallet output:", line.rstrip())
                 except Empty:
                     # print('no output yet')
                     pass
@@ -246,16 +242,19 @@ class CreateWalletPopup(Popup):
                     print("Simplewallet process killed")
                 except:
                     print("Wallet process not running")
-                windows_task_killer(p.pid)
-            with open('./{0}_walletData/info.txt'.format(wallet_name.replace('.', '')), 'w') as f:
+                try:
+                    windows_task_killer(App.get_running_app().root.wallet_process.pid)
+                except:
+                    print("Nonetype error")
+            with open(os.path.join(wallet_dir, "info.txt"), 'w') as f:
                 f.write("Name:\n{0}\n\nAddress:\n{1}\n\nView key:\n{2}\n\nElectrum seed:\n{3}".format(
                     wallet_name, address, view_key, electrum_line_2+' '+electrum_line_3+' '+electrum_line_4))
-            with open("./CONFIG.file", 'w') as f:
+            with open(os.path.join(App.get_running_app().root.data_dir, "CONFIG.file"), 'w') as f:
                 f.write("Account name= " + wallet_name + "\n")
                 f.write("Bitmonerod daemon server= {0}".format(cool_mining_URL))
             self.dismiss()
             content = Button(
-                text="Your wallet has been created in the local directory {0}_walletData\nThe info.txt document in that folder contains your wallet recovery seed.\nPlease keep this seed safe, you can restore a corrupted/lost wallet with it.\nSomeone else can also bypass your password and steal your XMR with it.\nI suggest deleting or encrypting this file.".format(
+                text="Your wallet has been created in the\nMy Documents/lightWallet/{0}_walletData directory.\nThe info.txt document in that folder contains your wallet recovery seed.\nPlease keep this seed safe, you can restore a corrupted/lost wallet with it.\nSomeone else can also bypass your password and steal your XMR with it.\nI suggest deleting or encrypting this file.\nClick to dismiss.".format(
                     wallet_name))
             walletCreatedPopup = Popup(title="Wallet created window", content=content, size_hint=(0.75, 0.75))
             content.bind(on_press=walletCreatedPopup.dismiss)
@@ -284,11 +283,13 @@ class LoadWalletPopup(Popup):
         split_name = os.path.split(self.wallet_path.text)[1].split('.')
         wallet_name = '.'.join(tuple(split_name[0:len(split_name) - 1]))
         print(split_name, wallet_name)
+        wallet_dir = os.path.join(App.get_running_app().root.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')))
+        wallet_file = os.path.join(wallet_dir, wallet_name)
         wallet_pw = self.wallet_pw.text
         wallet_error = True
         if self.wallet_pw.text == self.repeat_wallet_pw.text:
-            if not os.path.exists('./{0}_walletData'.format(wallet_name.replace('.', ''))):
-                os.mkdir('./{0}_walletData'.format(wallet_name.replace('.', '')))
+            if not os.path.exists(wallet_dir):
+                os.mkdir(wallet_dir)
             else:
                 sys.exit(7777)
             p = Popen(["simplewallet", "--wallet-file", self.wallet_path.text, "--password", wallet_pw],
@@ -320,21 +321,23 @@ class LoadWalletPopup(Popup):
                     print("Simplewallet process killed")
                 except:
                     print("Wallet process not running")
-                windows_task_killer(p.pid)
+                try:
+                    windows_task_killer(App.get_running_app().root.wallet_process.pid)
+                except:
+                    print("Nonetype error")
             wallet_error = False
         if not wallet_error:
-            if not os.path.exists("./{0}_walletData".format(wallet_name.replace('.', ''))):
-                os.mkdir("./{0}_walletData".format(wallet_name.replace('.', '')))
-            with open("./CONFIG.file", 'w') as f:
+            if not os.path.exists(wallet_dir):
+                os.mkdir(wallet_dir)
+            with open(os.path.join(App.get_running_app().root.data_dir, "CONFIG.file"), 'w') as f:
                 f.write("Account name= " + wallet_name + "\n")
                 f.write("Bitmonerod daemon server= {0}".format(cool_mining_URL))
-            with open("./{0}_walletData/{1}.address.txt".format(wallet_name.replace('.', ''), wallet_name), 'w') as f:
+            with open(os.path.join(wallet_dir, wallet_name+".address.txt"), 'w') as f:
                 f.write(address)
-            shutil.copyfile(self.wallet_path.text,
-                            "./{0}_walletData/{1}.keys".format(wallet_name.replace('.', ''), wallet_name))
+            shutil.copyfile(self.wallet_path.text, os.path.join(wallet_dir, wallet_name+".keys"))
             self.dismiss()
             content = Button(
-                text="Your wallet keys file has been copied to the local directory {0}_walletData\nThe original has not been disturbed.".format(
+                text="Your wallet keys file has been copied to the\nMy Documents/lightWallet/{0}_walletData directory.\nThe original has not been disturbed.\nClick to dismiss.".format(
                     wallet_name))
             walletCopiedPopup = Popup(title="Wallet keys copied window", content=content, size_hint=(0.75, 0.75))
             content.bind(on_press=walletCopiedPopup.dismiss)
@@ -448,6 +451,7 @@ class RootWidget(Accordion):
     """Root Kivy accordion widget class"""
     wallet_error = None
     incorrect_password = False
+    data_dir = os.path.join(os.path.expanduser('~'), "Documents", "lightWallet")
     # Tx list items
     # tx_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
     # Transfer XMR id items
@@ -493,9 +497,11 @@ class RootWidget(Accordion):
 
     def __init__(self, **kwargs):
         super(RootWidget, self).__init__(**kwargs)
+        if not os.path.isdir(self.data_dir):
+            os.makedirs(self.data_dir)
         self.daemon_server_textinput.text = cool_mining_URL
-        if os.path.isfile('./CONFIG.file'):
-            with open('./CONFIG.file', 'r') as f:
+        if os.path.isfile(os.path.join(self.data_dir, 'CONFIG.file')):
+            with open(os.path.join(self.data_dir, 'CONFIG.file'), 'r') as f:
                 lines = f.readlines()
             try:
                 self.wallet_name = lines[0].rstrip().split('=')[1].lstrip()
@@ -614,18 +620,13 @@ class RootWidget(Accordion):
     #     print("finished reset")
 
     def launchWallet(self, wallet_name, wallet_pw):
+        self.wallet_name = wallet_name
         self.wallet_pw = wallet_pw
-        print("./{0}_walletData/tx.txt".format(wallet_name.replace('.', '')))
-        print(os.path.isdir("./{0}_walletData".format(wallet_name.replace('.', ''))))
-        print(os.path.isfile("./{0}_walletData/tx.txt".format(wallet_name.replace('.', ''))))
-        print(os.getcwd())
-        print(os.path.join(os.getcwd(), "{0}_walletData".format(wallet_name.replace('.', ''))))
-        datadir = os.path.join(os.getcwd(), "{0}_walletData".format(wallet_name.replace('.', '')))
-        print(os.path.join(datadir, "tx.txt"))
-        tx_file = os.path.join(datadir, "tx.txt")
-        wallet_file = os.path.join(datadir, wallet_name)
-        address_file = os.path.join(datadir, wallet_name+".address.txt")
-        if not os.path.isfile("./{0}_walletData/{1}".format(wallet_name.replace('.', ''), wallet_name)):
+        wallet_dir = os.path.join(self.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')))
+        tx_file = os.path.join(self.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')), "tx.txt")
+        wallet_file = os.path.join(wallet_dir, wallet_name)
+        address_file = os.path.join(wallet_dir, wallet_name+".address.txt")
+        if not os.path.isfile(wallet_file):
             print("binary file not found, creating...")
             p = Popen(["simplewallet.exe", "--wallet-file", wallet_file, "--password", wallet_pw],
                                           stdin=PIPE,
@@ -661,7 +662,10 @@ class RootWidget(Accordion):
                     print("Simplewallet process killed")
                 except:
                     print("Wallet process not running")
-                windows_task_killer(p.pid)
+                try:
+                    windows_task_killer(App.get_running_app().root.wallet_process.pid)
+                except:
+                    print("Nonetype error")
             if not os.path.isfile(address_file):
                 with open(address_file, 'w') as f:
                     f.write(address)
@@ -688,11 +692,9 @@ class RootWidget(Accordion):
                         self.calculated_balance += float(temp_line[2])
                     elif temp_line[0] == "Spent":
                         self.calculated_balance -= float(temp_line[2])
-        print("Launching wallet process!")
         time.sleep(2)
         self.calculated_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(self.calculated_balance)
-        self.wallet_process = Popen(["simplewallet", "--wallet-file", "./{0}_walletData/{1}.keys".format(
-                                     wallet_name.replace('.', ''), wallet_name), "--password", wallet_pw,
+        self.wallet_process = Popen(["simplewallet", "--wallet-file", wallet_file, "--password", wallet_pw,
                                      "--daemon-address", self.daemon_server_textinput.text, "--rpc-bind-port", "19091"],
                                      # "--set_log", "0"],
                                       # stdin=PIPE,
@@ -702,7 +704,6 @@ class RootWidget(Accordion):
                                       # shell=True)
         # self.wallet_thread = Thread(target=read_output,
         #                             args=(self.wallet_process, self.wallet_process.stdout, self.wallet_queue))
-        print(self.wallet_process.pid)
         self.wallet_thread = Thread(target=enqueue_output,
                                     args=(self.wallet_process.stdout, self.wallet_queue))
         self.wallet_thread.daemon = True  # thread dies with the program
@@ -712,13 +713,16 @@ class RootWidget(Accordion):
         Clock.schedule_interval(self.readWalletQueue, 1e-3)
 
     def readWalletQueue(self, dt):
+        wallet_dir = os.path.join(self.data_dir, "{0}_walletData".format(self.wallet_name.replace('.', '')))
+        tx_file = os.path.join(self.data_dir, "{0}_walletData".format(self.wallet_name.replace('.', '')), "tx.txt")
+        wallet_file = os.path.join(wallet_dir, self.wallet_name)
         try:
             new_line = self.wallet_queue.get_nowait()
             # print(new_line)
             if "Wallet initialize failed: failed to read file" in new_line:
                 self.wallet_thread.join()
                 self.wallet_error = True
-                os.remove("./{0}_walletData/{1}".format(self.wallet_name.replace('.', ''), self.wallet_name))
+                os.remove(wallet_file)
                 Clock.schedule_once(self.initialPassword, 0.5)
             if "Wallet initialize failed: invalid password" in new_line:
                 self.wallet_thread.join()
@@ -755,7 +759,7 @@ class RootWidget(Accordion):
                 # self.ids.tx_scroller.clear_widgets()
                 self.ids.tx_list.add_widget(l)
                 # self.ids.tx_scroller.add_widget(self.ids.tx_list)
-                with open("./{0}_walletData/tx.txt".format(self.wallet_name), 'a') as tx_file:
+                with open(tx_file, 'a') as tx_file:
                     tx_file.write("{0}\t{1}\t{2:0.4f}\t{3}\n".format("Received", this_date, this_amount, this_tx))
             elif "Spent money" in new_line and "with tx" in new_line:
                 this_amount, this_tx, this_date = tx_split(new_line)
@@ -767,7 +771,7 @@ class RootWidget(Accordion):
                 # self.ids.tx_scroller.remove_widget(self.ids.tx_list)
                 self.ids.tx_list.add_widget(l)
                 # self.ids.tx_scroller.add_widget(self.ids.tx_list)
-                with open("./{0}_walletData/tx.txt".format(self.wallet_name), 'a') as tx_file:
+                with open(tx_file, 'a') as tx_file:
                     tx_file.write("{0}\t{1}\t{2:0.4f}\t{3}\n".format("Spent", this_date, this_amount, this_tx))
             # elif "Payment found" in newLine:
             #     with open("./{0}_walletData/tx.txt".format(self.wallet_name), 'a') as tx_file:
@@ -780,23 +784,18 @@ class RootWidget(Accordion):
         #     Clock.schedule_interval(self.readWalletQueue, 0.01)
 
     def saveWallet(self, dt):
-        print("Launching save thread")
         try:
             save_thread = Thread(target=self.storeWallet)
             save_thread.daemon = True
             save_thread.start()
-            print("Save thread started")
             save_thread.join()
         except:
             print("Save failed")
 
     def storeWallet(self):
-        print("Save thread started")
         response = storeWallet()
-        print(response)
         try:
             response = storeWallet()
-            print(response)
             if "jsonrpc" in response:
                 local_save_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
                 self.wallet_savetime_label.text = "Wallet saved @\n[b][color=00ffff]{0}[/b][/color]".format(local_save_time)
@@ -908,7 +907,10 @@ if __name__ == '__main__':
             print("Simplewallet process killed")
         except:
             print("Wallet process not running")
-        windows_task_killer(App.get_running_app().root.wallet_process.pid)
+        try:
+            windows_task_killer(App.get_running_app().root.wallet_process.pid)
+        except:
+            print("Nonetype error")
     # time.sleep(1.5)
     if os.path.isfile("./simplewallet.log"):
         try:
