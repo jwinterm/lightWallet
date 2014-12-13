@@ -17,6 +17,8 @@ On the initial run, it will prompt you to create a new wallet or to import one b
 ## Known issues
 The transaction history and calculated balance features are not fully working yet. This is something I plan to address, but since the wallet itself works (and simplewallet itself doesn't really implement a transaction history), and you can always see your balances with the total and unlocked balance readings, I decided to go ahead and release this alpha version, and will work on this in the future.
 
+If you manage to crash the program, you will probably get an instance of simplewallet.exe hanging around, so to get rid of it you will need to go into the task manager processes tab and end the simplewallet process, or restart your computer.
+
 ## Future Work
 There are several features I'd like to implement, the most important of which is probably tab for an address book, where you can store addresses (and payment ids) that are each a button, and when you click the button it autofills everything on the transfer tab. Of course I'm working on the record keeping of all incoming and outgoing transactions and the calculated balance which is derived from them. This is a really key feature that should probably be a part of any wallet, but the wallet is still functional at the moment, and the transaction history is quasi-functional.
 
