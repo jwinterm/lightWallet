@@ -709,7 +709,7 @@ class RootWidget(Accordion):
         self.wallet_thread.daemon = True  # thread dies with the program
         self.wallet_thread.start()
         self.wallet_account_label.text = "[b][color=00ffff]{0}[/b][/color]".format(wallet_name)
-        self.wallet_address_label.text = "[b][color=00ffff][ref=Address]{0}[/ref]\nClick to copy[/b][/color]".format(self.address)
+        self.wallet_address_label.text = "[b][color=00ffff][ref=Address]{0}\n[size=14]Click to copy[/b][/color][/size][/ref]".format(self.address)
         Clock.schedule_interval(self.readWalletQueue, 1e-3)
 
     def readWalletQueue(self, dt):
@@ -808,7 +808,7 @@ class RootWidget(Accordion):
     def selectAddress(self):
         """Copy address to clipboard when user clicks"""
         print('User clicked on ', self.address)
-        self.daemon_server_textinput.copy(self.address)
+        Clipboard.put(self.address)
 
     def transferfunds(self, address=None, mixin=None, amount=None, paymentid=None):
         if not address:
