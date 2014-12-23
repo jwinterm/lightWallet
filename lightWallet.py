@@ -4,13 +4,11 @@ from kivy.config import Config
 from kivy.uix.accordion import Accordion
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.properties import ObjectProperty
 from kivy.core.clipboard import Clipboard
 from kivy.clock import Clock
 from kivy.uix.popup import Popup
-from kivy.storage.jsonstore import JsonStore
 from kivy.uix.textinput import TextInput
 
 import os
@@ -21,34 +19,16 @@ import datetime
 import re
 import random
 import shutil
-import signal
 
 from subprocess import PIPE, Popen, STDOUT
 from threading import Thread
 from Queue import Queue, Empty
 
-from lib.checklastblock import CheckLastBlock
+from lib.checklastblock import checkLastBlock
 from lib.savewallet import storeWallet
-from lib.transferfunds import transferfundsrpccall
-from lib.checkbalance import CheckBalanceSimplewallet
-
-
-# sys.stdout = sys.stderr
-
-
-# class flushfile(object):
-#   def __init__(self, f):
-#     self.f = f
-#
-#   def write(self, x):
-#     self.f.write(x)
-#     self.f.flush()
-#
-# sys.stdout = flushfile(sys.stdout)
-
-
-# Set unbuffered output
-# msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+from lib.transferfunds import transferFundsRPCCall
+from lib.checkbalance import checkBalanceSimplewallet
+from lib.gettransfers import getTransfers
 
 
 # Set POSIX argument for linux for something...
@@ -61,7 +41,7 @@ donate_core_address = "46BeWrHpwXmHDpDEUmZBWZfoQpdc6HaERCNmx1pEYL2rAcuwufPN9rXHH
 # URLs for servers
 cool_mining_URL = "http://xmr1.coolmining.club:5012"
 localhost_URL = "http://localhost:18081"
-
+daemon_URL = cool_mining_URL
 
 # parser gets command line args
 parser = argparse.ArgumentParser()
@@ -73,43 +53,6 @@ def enqueue_output(out, queue):
     for line in iter(out.readline, b''):
         queue.put(line)
     out.close()
-
-
-def read_output(process, stdout, queue):
-    while True:
-        last_queue_read = time.time()
-        # out666 = stdout.readline(1)
-
-        out = stdout.readline()
-        # print(out)
-        # if len(out) < 2:
-        #     out = stdout.readline(1)
-        #     print("other out "+out)
-        # if out == '' and process.poll() != None:
-        if out == '':
-            print("passing last loop run @ {0}".format(last_queue_read))
-            # print("breaking last loop run @ {0}".format(last_queue_read))
-            # break
-            pass
-        if out != '':
-            print("queueing last loop run @ {0}".format(last_queue_read))
-            line = out.rstrip()
-            queue.put_nowait(line)
-#            sys.stdout.flush()
-
-
-# Function to split tx output lines
-def tx_split(line):
-    split_line = line.rstrip().split(': ')
-    try:
-        amount = float(split_line[1].split(',')[0])
-        tx = split_line[2].strip('<').strip('>')
-        date = split_line[0].split('.')[0]
-        return amount, tx, date
-    except ValueError:
-        return "Error", "Error", "Error"
-    except IndexError:
-        return "Error", "Error", "Error"
 
 
 # Check if a string is hex only
@@ -152,11 +95,29 @@ class TabTextInput(TextInput):
 
     def _keyboard_on_key_down(self, window, keycode, text, modifiers):
         key, key_str = keycode
-        if key in (9, 13) and self.next is not None:
+        if key == 9 and self.next is not None:
             self.next.focus = True
             self.next.select_all()
         else:
             super(TabTextInput, self)._keyboard_on_key_down(window, keycode, text, modifiers)
+
+
+class AsciiInput(TabTextInput):
+    """ TabTextInput class that only allows ascii input"""
+    pattern = re.compile('[^0-9a-zA-Z+_=;.\-\(\)\[\]{}]')
+    def insert_text(self, substring, from_undo=False):
+        pattern = self.pattern
+        s = re.sub(pattern, '', substring)
+        return super(AsciiInput, self).insert_text(s, from_undo=from_undo)
+
+
+class AsciiSlashInput(TabTextInput):
+    """ TabTextInput class that only allows ascii input and slashes"""
+    pattern = re.compile('[^0-9a-zA-Z+_=;:/.\-\(\)\[\]{}\\\]')
+    def insert_text(self, substring, from_undo=False):
+        pattern = self.pattern
+        s = re.sub(pattern, '', substring)
+        return super(AsciiSlashInput, self).insert_text(s, from_undo=from_undo)
 
 
 class InitialPopup(Popup):
@@ -181,7 +142,18 @@ class CreateWalletPopup(Popup):
     wallet_pw = ObjectProperty()
     repeat_wallet_pw = ObjectProperty()
 
-    def createWallet(self):
+    def __init__(self, *args, **kwargs):
+        super(CreateWalletPopup, self).__init__(*args, **kwargs)
+
+    def _keyboard_on_key_down(self, window, keycode, text, modifiers):
+        key, key_str = keycode
+        print(key, key_str)
+        if key in (13, 271):
+            self.submitForm()
+        else:
+            super(CreateWalletPopup, self)._keyboard_on_key_down(window, keycode, text, modifiers)
+
+    def submitForm(self):
         electrum_coming, electrum_1, electrum_2, electrum_3, electrum_4 = None, None, None, None, None
         wallet_name = self.wallet_name.text
         wallet_pw = self.wallet_pw.text
@@ -192,7 +164,7 @@ class CreateWalletPopup(Popup):
                 os.mkdir(wallet_dir)
             else:
                 sys.exit(7777)
-            p = Popen(["simplewallet", "--generate-new-wallet", wallet_file, "--password", wallet_pw, "--set_log", "0"],
+            p = Popen(["simplewallet", "--generate-new-wallet", wallet_file, "--password", wallet_pw],
                       stdout=PIPE,
                       stdin=PIPE,
                       bufsize=1,
@@ -200,7 +172,7 @@ class CreateWalletPopup(Popup):
             q = Queue()
             t = Thread(target=enqueue_output, args=(p.stdout, q))
             t.daemon = True  # thread dies with the program
-            p.stdin.write("0\r\n")
+            p.stdin.write(str("0\r\n"))
             p.stdin.flush()
             t.start()
             t_start = time.time()
@@ -228,7 +200,7 @@ class CreateWalletPopup(Popup):
                     if 130 < len(line.rstrip()) < 350:
                         electrum_coming = True
                         print(line.rstrip())
-                    # print("simplewallet output:", line.rstrip())
+                    print("simplewallet output:", line.rstrip())
                 except Empty:
                     # print('no output yet')
                     pass
@@ -251,20 +223,24 @@ class CreateWalletPopup(Popup):
                     wallet_name, address, view_key, electrum_line_2+' '+electrum_line_3+' '+electrum_line_4))
             with open(os.path.join(App.get_running_app().root.data_dir, "CONFIG.file"), 'w') as f:
                 f.write("Account name= " + wallet_name + "\n")
-                f.write("Bitmonerod daemon server= {0}".format(cool_mining_URL))
+                f.write("Bitmonerod daemon server= {0}".format(daemon_URL))
             self.dismiss()
-            content = Button(
+            confirm_box = BoxLayout(orientation='vertical')
+            confirm_label = Label(
                 text="Your wallet has been created in the\nMy Documents/lightWallet/{0}_walletData directory.\nThe info.txt document in that folder contains your wallet recovery seed.\nPlease keep this seed safe, you can restore a corrupted/lost wallet with it.\nSomeone else can also bypass your password and steal your XMR with it.\nI suggest deleting or encrypting this file.\nClick to dismiss.".format(
                     wallet_name))
-            walletCreatedPopup = Popup(title="Wallet created window", content=content, size_hint=(0.75, 0.75))
-            content.bind(on_press=walletCreatedPopup.dismiss)
+            confirm_button = Button(text="Click to dismiss", size_hint_y=0.2)
+            confirm_box.add_widget(confirm_label)
+            confirm_box.add_widget(confirm_button)
+            walletCreatedPopup = Popup(title="Wallet created window", content=confirm_box, size_hint=(0.75, 0.75), auto_dismiss=False)
+            confirm_button.bind(on_press=walletCreatedPopup.dismiss)
             walletCreatedPopup.open()
             App.get_running_app().root.daemon_thread = Thread(target=App.get_running_app().root.checkDaemonStatus,
-                                        args=(App.get_running_app().root.daemon_queue, cool_mining_URL))
+                                        args=(App.get_running_app().root.daemon_queue, daemon_URL))
             App.get_running_app().root.daemon_thread.daemon = True
             App.get_running_app().root.daemon_thread.start()
             App.get_running_app().root.launchWallet(wallet_name, wallet_pw)
-            App.get_running_app().root.daemon_server_textinput.text = cool_mining_URL
+            App.get_running_app().root.daemon_server_textinput.text = daemon_URL
         else:
             content = Button(text="Check passwords!!!\nClick to dismiss")
             pwErrorPopup = Popup(title="Password match error window",
@@ -279,7 +255,7 @@ class LoadWalletPopup(Popup):
     wallet_pw = ObjectProperty()
     repeat_wallet_pw = ObjectProperty()
 
-    def loadWallet(self):
+    def submitForm(self):
         split_name = os.path.split(self.wallet_path.text)[1].split('.')
         wallet_name = '.'.join(tuple(split_name[0:len(split_name) - 1]))
         print(split_name, wallet_name)
@@ -331,7 +307,7 @@ class LoadWalletPopup(Popup):
                 os.mkdir(wallet_dir)
             with open(os.path.join(App.get_running_app().root.data_dir, "CONFIG.file"), 'w') as f:
                 f.write("Account name= " + wallet_name + "\n")
-                f.write("Bitmonerod daemon server= {0}".format(cool_mining_URL))
+                f.write("Bitmonerod daemon server= {0}".format(daemon_URL))
             with open(os.path.join(wallet_dir, wallet_name+".address.txt"), 'w') as f:
                 f.write(address)
             shutil.copyfile(self.wallet_path.text, os.path.join(wallet_dir, wallet_name+".keys"))
@@ -341,10 +317,10 @@ class LoadWalletPopup(Popup):
                     wallet_name))
             walletCopiedPopup = Popup(title="Wallet keys copied window", content=content, size_hint=(0.75, 0.75))
             content.bind(on_press=walletCopiedPopup.dismiss)
-            App.get_running_app().root.daemon_server_textinput.text = cool_mining_URL
+            App.get_running_app().root.daemon_server_textinput.text = daemon_URL
             walletCopiedPopup.open()
             App.get_running_app().root.daemon_thread = Thread(target=App.get_running_app().root.checkDaemonStatus,
-                                        args=(App.get_running_app().root.daemon_queue, cool_mining_URL))
+                                        args=(App.get_running_app().root.daemon_queue, daemon_URL))
             App.get_running_app().root.daemon_thread.daemon = True
             App.get_running_app().root.daemon_thread.start()
             App.get_running_app().root.launchWallet(wallet_name, wallet_pw)
@@ -375,7 +351,7 @@ class PasswordPopup(Popup):
             self.walletname_label.text = "It seems you've entered an incorrect password,\nPlease re-enter your password to open {0} account:".format(
                 self.wallet_name)
 
-    def launchWallet(self):
+    def submitForm(self):
         wallet_pw = self.wallet_pw.text
         App.get_running_app().root.launchWallet(self.wallet_name, wallet_pw)
         self.dismiss()
@@ -396,7 +372,7 @@ class TransferPopup(Popup):
         self.transfer_popup_label.text = self.popuptext
 
     def transfer(self):
-        return_boolean, return_value = transferfundsrpccall(self.amount, self.address, self.mixin, self.paymentid)
+        return_boolean, return_value = transferFundsRPCCall(self.amount, self.address, self.mixin, self.paymentid)
         txid_popup = TxIDPopup(return_boolean, return_value, self.amount, self.address, self.mixin, self.paymentid)
         txid_popup.open()
 
@@ -454,6 +430,7 @@ class RootWidget(Accordion):
     data_dir = os.path.join(os.path.expanduser('~'), "Documents", "lightWallet")
     # Tx list items
     # tx_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
+    root_widget = ObjectProperty()
     # Transfer XMR id items
     address_input_textinput = ObjectProperty()
     amount_input_textinput = ObjectProperty()
@@ -484,6 +461,12 @@ class RootWidget(Accordion):
     wallet_thread = None
     save_thread = None
     save_queue = Queue()
+    tx_thread = None
+    tx_queue = Queue()
+    spent_tx = []
+    unspent_tx = []
+    spent_tx_dict = {}
+    unspent_tx_dict = {}
     # Other variables
     wallet_height = None
     calculated_balance = 0.0
@@ -499,7 +482,7 @@ class RootWidget(Accordion):
         super(RootWidget, self).__init__(**kwargs)
         if not os.path.isdir(self.data_dir):
             os.makedirs(self.data_dir)
-        self.daemon_server_textinput.text = cool_mining_URL
+        self.daemon_server_textinput.text = daemon_URL
         if os.path.isfile(os.path.join(self.data_dir, 'CONFIG.file')):
             with open(os.path.join(self.data_dir, 'CONFIG.file'), 'r') as f:
                 lines = f.readlines()
@@ -515,13 +498,18 @@ class RootWidget(Accordion):
                 Clock.schedule_once(self.initialConfig, 0.5)
         else:
             Clock.schedule_once(self.initialConfig, 0.5)
-        Clock.schedule_interval(self.checkDaemon, 2)
         self.balance_thread = Thread(target=self.checkBalanceStatus, args=(self.balance_queue,))
         self.balance_thread.daemon = True
         self.balance_thread.start()
-        Clock.schedule_interval(self.checkBalance, 2)
-        Clock.schedule_interval(self.saveWallet, 60)
-        self.ids.tx_list.bind(minimum_height=self.ids.tx_list.setter('height'))
+        self.tx_thread = Thread(target=self.checkTransactionsStatus, args=(self.tx_queue,))
+        self.tx_thread.daemon = True
+        self.tx_thread.start()
+        Clock.schedule_interval(self.checkDaemon, 7)
+        Clock.schedule_interval(self.checkBalance, 7)
+        Clock.schedule_interval(self.checkTransactions, 12)
+        Clock.schedule_interval(self.saveWallet, 180)
+        self.ids.unspent_tx_list.bind(minimum_height=self.ids.unspent_tx_list.setter('height'))
+        self.ids.spent_tx_list.bind(minimum_height=self.ids.spent_tx_list.setter('height'))
 
     def initialConfig(self, dt):
         ip = InitialPopup()
@@ -534,12 +522,9 @@ class RootWidget(Accordion):
     def checkDaemonStatus(self, daemon_queue, server):
         """Method to be threaded for checking bitmonerod status"""
         while True:
-            # print(server)
-            height, reward, timesince, localtime = CheckLastBlock(server + "/json_rpc")
+            height, reward, timesince, localtime = checkLastBlock(server + "/json_rpc")
             daemon_queue.put((height, reward, timesince, localtime))
-            # print("sleeping")
-            time.sleep(1)
-            #self.checkDaemonStatus(daemon_queue, self.daemon_server_textinput.text)
+            time.sleep(5)
 
     def checkDaemon(self, dt):
         """RPC call to check bitmonerod for blockchain info"""
@@ -563,26 +548,19 @@ class RootWidget(Accordion):
     def checkBalanceStatus(self, balance_queue):
         """Method to be threaded for checking balance status"""
         while True:
-            balance, unlocked_balance = CheckBalanceSimplewallet()
-            # print("Putting {0} and {1} in queue". format(balance, unlocked_balance))
+            balance, unlocked_balance = checkBalanceSimplewallet()
             balance_queue.put((balance, unlocked_balance))
-            time.sleep(1)
-            #self.checkDaemonStatus(daemon_queue, self.daemon_server_textinput.text)
+            time.sleep(5)
 
     def checkBalance(self, dt):
         """RPC call to check bitmonerod for blockchain info"""
-        # print("checking queue")
         try:
             balance, unlocked_balance = self.balance_queue.get_nowait()
-            # print("Got from queue: {0} and {1}".format(balance, unlocked_balance))
             try:
                 self.total_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(float(balance))
                 self.unlocked_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(float(unlocked_balance))
                 self.unlocked_balance, self.total_balance = float(unlocked_balance), float(balance)
-                # self.total_balance_label.text = "[b][color=00ffff]{0}[/b][/color]".format(balance)
-                # self.unlocked_balance_label.text = "[b][color=00ffff]{0}[/b][/color] XMR".format(unlocked_balance)
             except ValueError:
-                # print("value error")
                 self.total_balance_label.text = "[b][color=ff0000]{0}[/b][/color]".format("No wallet connection or syncing")
                 self.unlocked_balance_label.text = "[b][color=ff0000]{0}[/b][/color]".format("No wallet connection or syncing")
         except Empty:
@@ -590,40 +568,49 @@ class RootWidget(Accordion):
             self.total_balance_label.text = "[b][color=ff0000]{0}[/b][/color]".format("No wallet connection or syncing")
             self.unlocked_balance_label.text = "[b][color=ff0000]{0}[/b][/color]".format("No wallet connection or syncing")
 
-    # def resetDaemon(self):
-    #     print("resetting")
-    #     save_thread = Thread(target=storeWallet)
-    #     save_thread.daemon = True
-    #     save_thread.start()
-    #     save_thread.join()
-    #     self.wallet_process.kill()
-    #     if sys.platform == 'win32':
-    #         try:
-    #             os.system("taskkill /im simplewallet.exe /f")
-    #         except:
-    #             print("Simplewallet.exe not running")
-    #     self.daemon_thread.join(0.5)
-    #     self.daemon_thread = Thread(target=self.checkDaemonStatus,
-    #                                 args=(self.daemon_queue, self.daemon_server_textinput.text))
-    #     self.daemon_thread.daemon = True
-    #     self.daemon_thread.start()
-    #     self.wallet_process = Popen(["simplewallet", "--wallet-file", "./{0}_walletData/{1}.keys".format(
-    #                                  self.wallet_name.replace('.', ''), self.wallet_name), "--password", self.wallet_pw,
-    #                                  "--daemon-address", self.daemon_server_textinput.text, "--rpc-bind-port", "19091"],
-    #                                   # stdin=PIPE,
-    #                                   stdout=PIPE,
-    #                                   stderr=STDOUT,
-    #                                   bufsize=1,
-    #                                   shell=True)
-    #     self.wallet_thread = Thread(target=enqueue_output,
-    #                                 args=(self.wallet_process.stdout, self.wallet_queue))
-    #     print("finished reset")
+    def checkTransactionsStatus(self, tx_queue):
+        """Method to be threaded for checking balance status"""
+        while True:
+            unspent_txs, spent_txs = getTransfers()
+            tx_queue.put((unspent_txs, spent_txs))
+            time.sleep(10)
+
+    def checkTransactions(self, dt):
+        """RPC call to check bitmonerod for blockchain info"""
+        try:
+            unspent_txs, spent_txs = self.tx_queue.get_nowait()
+            if len(unspent_txs) > len(self.unspent_tx) or len(spent_txs) > len(self.spent_tx):
+                self.unspent_tx = unspent_txs
+                self.spent_tx = spent_txs
+                self.unspent_tx_dict = {}
+                self.spent_tx_dict = {}
+                self.ids.unspent_tx_list.clear_widgets()
+                self.ids.spent_tx_list.clear_widgets()
+                temp_balance = 0.0
+                for idx, val in enumerate(self.unspent_tx):
+                    self.unspent_tx_dict[idx] = Button(text="tx_id: {0} | amount: {1:.4f}".format(val[0], val[1]),
+                               size_hint_y=None, height=15, font_size=9)
+                    self.unspent_tx_dict[idx].bind(on_press=self._create_button_callback(val[0]))
+                    self.ids.unspent_tx_list.add_widget(self.unspent_tx_dict[idx])
+                    temp_balance += val[1]
+                for idx, val in enumerate(self.spent_tx):
+                    self.spent_tx_dict[idx] = Button(text="tx_id: {0} | amount: {1:.4f}".format(val[0], val[1]),
+                               size_hint_y=None, height=15, font_size=9)
+                    self.spent_tx_dict[idx].bind(on_press=self._create_button_callback(val[0]))
+                    self.ids.spent_tx_list.add_widget(self.spent_tx_dict[idx])
+                self.calculated_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(float(temp_balance))
+        except Empty:
+            pass
+
+    def _create_button_callback(self, val):
+        def callback(button):
+            Clipboard.put(val)
+        return callback
 
     def launchWallet(self, wallet_name, wallet_pw):
         self.wallet_name = wallet_name
         self.wallet_pw = wallet_pw
         wallet_dir = os.path.join(self.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')))
-        tx_file = os.path.join(self.data_dir, "{0}_walletData".format(wallet_name.replace('.', '')), "tx.txt")
         wallet_file = os.path.join(wallet_dir, wallet_name)
         address_file = os.path.join(wallet_dir, wallet_name+".address.txt")
         if not os.path.isfile(wallet_file):
@@ -673,37 +660,13 @@ class RootWidget(Accordion):
         if os.path.isfile(address_file):
             with open(address_file, 'r') as f:
                 self.address = f.read().rstrip()
-
-        # Check if tx file exists and create it if not or read txs if it does
-        if not os.path.isfile(tx_file):
-            with open(tx_file, 'w+') as previous_txs:
-                previous_txs.write("{0}\t{1}\t{2}\t{3}\n".format("tx type", "tx time", "XMR amount", "tx hash"))
-        if os.path.isfile(tx_file):
-            with open(tx_file, 'r') as previous_txs:
-                txs = previous_txs.read().split('\n')
-            for idx, line in enumerate(txs):
-                temp_line = line.split('\t')
-                if idx > 0 and len(temp_line) == 4:
-                    l = Label(text="{0} {1} XMR on {2} in tx: {3}".format(
-                              temp_line[0], temp_line[1], temp_line[2], temp_line[3]),
-                              size_hint_y=None, height=15, font_size=9)
-                    self.ids.tx_list.add_widget(l)
-                    if temp_line[0] == "Received":
-                        self.calculated_balance += float(temp_line[2])
-                    elif temp_line[0] == "Spent":
-                        self.calculated_balance -= float(temp_line[2])
         time.sleep(2)
         self.calculated_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(self.calculated_balance)
         self.wallet_process = Popen(["simplewallet", "--wallet-file", wallet_file, "--password", wallet_pw,
                                      "--daemon-address", self.daemon_server_textinput.text, "--rpc-bind-port", "19091"],
-                                     # "--set_log", "0"],
-                                      # stdin=PIPE,
                                       stdout=PIPE,
                                       stderr=STDOUT,
                                       bufsize=1)
-                                      # shell=True)
-        # self.wallet_thread = Thread(target=read_output,
-        #                             args=(self.wallet_process, self.wallet_process.stdout, self.wallet_queue))
         self.wallet_thread = Thread(target=enqueue_output,
                                     args=(self.wallet_process.stdout, self.wallet_queue))
         self.wallet_thread.daemon = True  # thread dies with the program
@@ -714,7 +677,6 @@ class RootWidget(Accordion):
 
     def readWalletQueue(self, dt):
         wallet_dir = os.path.join(self.data_dir, "{0}_walletData".format(self.wallet_name.replace('.', '')))
-        tx_file = os.path.join(self.data_dir, "{0}_walletData".format(self.wallet_name.replace('.', '')), "tx.txt")
         wallet_file = os.path.join(wallet_dir, self.wallet_name)
         try:
             new_line = self.wallet_queue.get_nowait()
@@ -749,39 +711,8 @@ class RootWidget(Accordion):
                 self.unlocked_balance = float(split_line[3].split(': ')[1])
                 self.total_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(self.total_balance)
                 self.unlocked_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(self.unlocked_balance)
-            elif "Received money" in new_line and "with tx" in new_line:
-                this_amount, this_tx, this_date = tx_split(new_line)
-                self.calculated_balance += this_amount
-                self.calculated_balance_label.text = "[b][color=00ffff]{0:.3f}[/b][/color] XMR".format(
-                    self.calculated_balance)
-                l = Label(text="Received {0:0.4f} XMR on {1} in tx: {2}".format(this_amount, this_date, this_tx),
-                          size_hint_y=None, height=15, font_size=9)
-                # self.ids.tx_scroller.clear_widgets()
-                self.ids.tx_list.add_widget(l)
-                # self.ids.tx_scroller.add_widget(self.ids.tx_list)
-                with open(tx_file, 'a') as tx_file:
-                    tx_file.write("{0}\t{1}\t{2:0.4f}\t{3}\n".format("Received", this_date, this_amount, this_tx))
-            elif "Spent money" in new_line and "with tx" in new_line:
-                this_amount, this_tx, this_date = tx_split(new_line)
-                self.calculated_balance += this_amount
-                self.calculated_balance_label.text = "[b][color=00ffff]{0:.4f}[/b][/color] XMR".format(
-                    self.calculated_balance)
-                l = Label(text="Spent {0:0.4f} XMR on {1} in tx: {2}".format(this_amount, this_date, this_tx),
-                          size_hint_y=None, height=15, font_size=9)
-                # self.ids.tx_scroller.remove_widget(self.ids.tx_list)
-                self.ids.tx_list.add_widget(l)
-                # self.ids.tx_scroller.add_widget(self.ids.tx_list)
-                with open(tx_file, 'a') as tx_file:
-                    tx_file.write("{0}\t{1}\t{2:0.4f}\t{3}\n".format("Spent", this_date, this_amount, this_tx))
-            # elif "Payment found" in newLine:
-            #     with open("./{0}_walletData/tx.txt".format(self.wallet_name), 'a') as tx_file:
-            #         tx_file.write(newLine + '\n')
         except Empty:
             pass
-        # if not self.wallet_thread.is_alive():
-        #     print("dead")
-        #     self.wallet_thread.start()
-        #     Clock.schedule_interval(self.readWalletQueue, 0.01)
 
     def saveWallet(self, dt):
         try:
@@ -890,6 +821,13 @@ class RootWidget(Accordion):
         core_donate_popup = DonateCore()
         core_donate_popup.open()
 
+    def changeTabs(self):
+        print(self.root_widget.orientation)
+        if self.root_widget.orientation == "horizontal":
+            self.root_widget.orientation = "vertical"
+        else:
+            self.root_widget.orientation = "horizontal"
+
 
 class lightWalletApp(App):
     def build(self):
@@ -900,7 +838,20 @@ class lightWalletApp(App):
 if __name__ == '__main__':
     Config.set('kivy', 'exit_on_escape', 0)
     Config.set('kivy', 'window_icon', "./lilicon.ico")
+    Config.set('input', 'mouse', 'mouse,disable_multitouch')
     lightWalletApp().run()
+    try:
+        tx_file = os.path.join(App.get_running_app().root.data_dir,
+                               "{0}_walletData".format(App.get_running_app().root.wallet_name.replace('.', '')), "tx.txt")
+        with open(tx_file, 'w') as txs:
+            txs.write("Unspent tx outputs:\n")
+            for i in App.get_running_app().root.unspent_tx:
+                txs.write("tx_id: {0} | amount: {1:.4f}\n".format(i[0], i[1]))
+            txs.write("\nSpent tx outputs:\n")
+            for i in App.get_running_app().root.spent_tx:
+                txs.write("tx_id: {0} | amount: {1:.4f}\n".format(i[0], i[1]))
+    except:
+        print("Problem writing tx file")
     if sys.platform == 'win32':
         try:
             App.get_running_app().root.wallet_process.kill()

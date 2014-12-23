@@ -16,7 +16,7 @@ payload = json.dumps({
 })
 
 
-def CheckLastBlock(serverURL=default_URL):
+def checkLastBlock(serverURL=default_URL):
     """Try and get last block info and return formatted text"""
     # print('Attempting {0} RPC call'.format(CheckLastBlock.__name__))
     try:
@@ -40,4 +40,4 @@ def CheckLastBlock(serverURL=default_URL):
 
 
 if __name__ == "__main__":
-   CheckLastBlock()
+   checkLastBlock()

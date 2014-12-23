@@ -1,11 +1,11 @@
 #:kivy 1.8.0
 
 <RootWidget>:
-    id: rootwidget
+    id: root_widget
+    orientation: "vertical"
+    root_widget: root_widget
     # Tx history tab id items
-#    tx_list: tx_list
-    # tx_scroller: tx_scroller
-    # scroll_box: scroll_box
+    # empty
     # Transfer tab id items
     address_input_textinput: address_input_textinput
     amount_input_textinput: amount_input_textinput
@@ -33,17 +33,31 @@
             padding: 30, 30, 30, 30
             orientation: "vertical"
             Label:
-                text: "Transaction history list (scrollable)"
+                text: "Transaction outputs history list (scrollable).\nClick button to copy tx_id."
+                size_hint_y: 0.1
+                halign: "center"
+            MarkupLabel:
+                text: "[color=00ffff][b]Unspent tx outputs[/color][/b]"
                 size_hint_y: 0.1
             ScrollView:
-                id: tx_scroller
-                size_hint: 1, 1
+                id: unspent_tx_scroller
+                size_hint: 1, 0.35
                 GridLayout:
                     cols: 1
                     spacing: 7
                     size_hint_y: None
-                    id: tx_list
-
+                    id: unspent_tx_list
+            MarkupLabel:
+                text: "[color=00ffff][b]Spent tx outputs[/color][/b]"
+                size_hint_y: 0.1
+            ScrollView:
+                id: spent_tx_scroller
+                size_hint: 1, 0.35
+                GridLayout:
+                    cols: 1
+                    spacing: 7
+                    size_hint_y: None
+                    id: spent_tx_list
     AccordionItem:
         title: "Send XMR"
         BoxLayout:
@@ -121,11 +135,11 @@
                 MarkupLabel:
                     size_hint_x: 0.7
                     halign: "center"
-                    text: "Please donate XMR to Cool Mining Club\nfor generously running a bitmonerod open node."
+                    text: "Please donate to Cool Mining for generously\nrunning an open node and supporting lightWallet."
                 Button:
                     size_hint_x: 0.3
                     halign: "center"
-                    text: "Click to\ndonate XMR to\nCool Mining Club"
+                    text: "Click to donate XMR\nto Cool Mining Club"
                     on_press: root.donate_CMC()
             BoxLayout:
                 orientation: 'horizontal'
@@ -133,11 +147,11 @@
                 MarkupLabel:
                     size_hint_x: 0.7
                     halign: "center"
-                    text: "Please donate XMR to Monero core developers\nfor generously donating their time and effort."
+                    text: "Please donate to Monero core developers\nfor generously donating their time and effort."
                 Button:
                     size_hint_x: 0.3
                     halign: "center"
-                    text: "Click to\ndonate XMR to\ncore Monero devs"
+                    text: "Click to donate XMR\nto the core Monero devs"
                     on_press: root.donate_core()
 
     AccordionItem:
@@ -202,7 +216,7 @@
                 orientation: 'horizontal'
                 size_hint_y: 0.25
                 Button:
-                    text: "Save wallet\n(Attempts to autosave\nafter every minute)"
+                    text: "Save wallet\n(Attempts to autosave every minute)"
                     halign: "center"
                     on_press: root.saveWallet(0.1)
                 MarkupLabel:
@@ -236,10 +250,10 @@
                     # text: "http://xmr1.coolmining.club:5012"
                     # text: "http://localhost:18081"
                 Button:
-                    text: "Change daemon\naddress in\nCONFIG.file"
+                    text: "Click to change tab\norientation."
                     halign: "center"
                     size_hint_x: 0.4
-                    # on_press: root.resetDaemon()
+                    on_press: root.changeTabs()
             Label:
                 size_hint_y: 0.1
             BoxLayout:
@@ -302,7 +316,7 @@
 <CreateWalletPopup>:
     id: create_wallet_popup
     title: "Create Wallet Window"
-    auto_dismiss: "False"
+    auto_dismiss: False
     size_hint: 0.75, 0.75
     wallet_name: wallet_name
     wallet_pw: wallet_pw
@@ -310,26 +324,31 @@
     BoxLayout:
         padding: 60, 60, 60, 60
         orientation: 'vertical'
+        MarkupLabel:
+            text: "[color=#00ffff][b]Wallet name must be alphanumeric (0-9, a-z, A-Z, -, ., (), [], {}, +, _, etc.).\nPassword may also contain special characters such as !, @, #, etc.[/color][/b]"
         Label:
             text: "Enter wallet name:"
-        TabTextInput:
+        AsciiInput:
             id: wallet_name
             next: wallet_pw
+            on_text_validate: root.submitForm()
         Label:
             text: "Enter wallet password:"
         TabTextInput:
             id: wallet_pw
             password: True
             next: repeat_wallet_pw
+            on_text_validate: root.submitForm()
         Label:
             text: "Repeat wallet password:"
         TabTextInput:
             id: repeat_wallet_pw
             password: True
-            next: wallet_pw
+            next: wallet_name
+            on_text_validate: root.submitForm()
         Button:
             text: "Click to create wallet"
-            on_press: root.createWallet()
+            on_press: root.submitForm()
 
 
 <LoadWalletPopup>:
@@ -347,10 +366,11 @@
             size_hint_y: 0.3
             halign: "center"
             text: "Enter wallet keys path (make sure you include file extension)\nNote: this will copy your keys file to a local subdirectory;\nit will not use your original wallet file(s).\nExample - [b][color=00ffff]C:\\Users\\Satoshi\\SecretStuff\\Wallets\\Monero\\wallet.bin.keys[/b][/color]:"
-        TabTextInput:
+        AsciiSlashInput:
             size_hint_y: 0.1
             id: wallet_path
             next: wallet_pw
+            on_text_validate: root.submitForm()
         Label:
             size_hint_y: 0.1
             text: "Enter wallet password:"
@@ -359,6 +379,7 @@
             id: wallet_pw
             password: True
             next: repeat_wallet_pw
+            on_text_validate: root.submitForm()
         Label:
             size_hint_y: 0.1
             text: "Repeat wallet password:"
@@ -367,13 +388,14 @@
             id: repeat_wallet_pw
             password: True
             next: wallet_path
+            on_text_validate: root.submitForm()
         Label:
             size_hint_y: 0.1
             text: "Note - this wallet will be set as your default wallet"
         Button:
             size_hint_y: 0.15
             text: "Click to load wallet"
-            on_press: root.loadWallet()
+            on_press: root.submitForm()
 
 
 <PasswordPopup>
@@ -392,11 +414,12 @@
             size_hint: 1, 0.1
             id: wallet_pw
             password: True
+            on_text_validate: root.submitForm()
         Label:
             size_hint: 1, 0.2
         Button:
             text: "Click to launch wallet"
-            on_press: root.launchWallet()
+            on_press: root.submitForm()
             size_hint: 1, 0.5
 
 

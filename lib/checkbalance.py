@@ -10,7 +10,7 @@ payload = json.dumps({
 })
 
 
-def CheckBalanceSimplewallet():
+def checkBalanceSimplewallet():
     """function to make rpc call to simplewallet to get current balance"""
     # print 'Attempting {0} RPC call'.format(CheckBalanceSimplewallet.__name__)
     try:
@@ -33,4 +33,4 @@ def CheckBalanceSimplewallet():
 
 
 if __name__ == "__main__":
-    print CheckBalanceSimplewallet()
+    print checkBalanceSimplewallet()

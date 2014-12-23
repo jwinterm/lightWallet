@@ -5,7 +5,7 @@ from ctypes import c_uint64
 serverURL = 'http://localhost:19091/json_rpc'
 
 
-def transferfundsrpccall(amount, address, mixin, paymentid):
+def transferFundsRPCCall(amount, address, mixin, paymentid):
     """function to transfer funds to a single address"""
     atomicamount = c_uint64(int((float(amount)*1e12)))
     address = str(address)
@@ -61,4 +61,4 @@ def transferfundsrpccall(amount, address, mixin, paymentid):
 
 
 if __name__ == "__main__":
-    transferfundsrpccall()
+    transferFundsRPCCall()
