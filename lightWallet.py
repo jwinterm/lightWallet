@@ -35,13 +35,13 @@ from lib.gettransfers import getTransfers
 ON_POSIX = 'posix' in sys.builtin_module_names
 
 # Donation wallet addy
-donate_CMC_address = "4ATxc8rJjG62ToWqCibuPv7kY9ikds3b3JmRHYqAAymEdhwBGfhtwRgMuHF9bsn18f4wXrK93cw6xdsVCJJwizkiHeUuJKB"
+# donate_CMC_address = "4ATxc8rJjG62ToWqCibuPv7kY9ikds3b3JmRHYqAAymEdhwBGfhtwRgMuHF9bsn18f4wXrK93cw6xdsVCJJwizkiHeUuJKB"
 donate_core_address = "46BeWrHpwXmHDpDEUmZBWZfoQpdc6HaERCNmx1pEYL2rAcuwufPN9rXHHtyUA4QVy66qeFQkn6sfK8aHYjA3jk3o1Bv16em"
 
 # URLs for servers
-cool_mining_URL = "http://xmr1.coolmining.club:5012"
+moneroclub_URL = "http://node.moneroclub.com:8880"
 localhost_URL = "http://localhost:18081"
-daemon_URL = cool_mining_URL
+daemon_URL = moneroclub_URL
 
 # parser gets command line args
 parser = argparse.ArgumentParser()

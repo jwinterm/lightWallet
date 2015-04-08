@@ -129,18 +129,18 @@
                 font_size: 20
             Label:
                 size_hint_y: 0.05
-            BoxLayout:
-                orientation: 'horizontal'
-                size_hint_y: 0.15
-                MarkupLabel:
-                    size_hint_x: 0.7
-                    halign: "center"
-                    text: "Please donate to Cool Mining for generously\nrunning an open node and supporting lightWallet."
-                Button:
-                    size_hint_x: 0.3
-                    halign: "center"
-                    text: "Click to donate XMR\nto Cool Mining Club"
-                    on_press: root.donate_CMC()
+#            BoxLayout:
+#                orientation: 'horizontal'
+#                size_hint_y: 0.15
+#                MarkupLabel:
+#                    size_hint_x: 0.7
+#                    halign: "center"
+#                    text: "Please donate to Cool Mining for generously\nrunning an open node and supporting lightWallet."
+#                Button:
+#                    size_hint_x: 0.3
+#                    halign: "center"
+#                    text: "Click to donate XMR\nto Cool Mining Club"
+#                    on_press: root.donate_CMC()
             BoxLayout:
                 orientation: 'horizontal'
                 size_hint_y: 0.15
@@ -229,15 +229,15 @@
             orientation: 'vertical'
             padding: 30, 30, 30, 30
             Image:
-                size_hint_y: 0.2
+                size_hint_y: 0.3
                 source: 'logo.png'
             Label:
                 size_hint_y: 0.05
                 text: "A lightweight Monero GUI account manager"
             Label:
-                size_hint_y: 0.1
+                size_hint_y: 0.05
             Label:
-                text: "Daemon ip address (default is Coolmining Club)\nto use a local instance enter http://localhost:18081\nin CONFIG.file in local directory."
+                text: "Daemon ip address (default is MoneroClub)\nto use a local instance enter http://localhost:18081\nin CONFIG.file in local directory."
                 size_hint_y: 0.1
             BoxLayout:
                 size_hint_y: 0.15
