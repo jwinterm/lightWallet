@@ -1,5 +1,5 @@
 # lightWallet Kivy GUI
-This is a GUI frontend that runs on top of bitmonerod and simplewallet (in RPC mode). It is designed to work with a remote bitmonerod node, so that it can function as a lightweight wallet for most users. By default it uses hegemoOn's open node at http://xmr1.coolmining.club:5012, but you can change the node it uses in the CONFIG.file stored in the My Documents/lightWallet directory; a local bitmonerod instance with http://localhost:18081 or Atrides recently launched an open node at http://node.moneroclub.com:8880. 
+This is a GUI frontend that runs on top of bitmonerod and simplewallet (in RPC mode). It is designed to work with a remote bitmonerod node, so that it can function as a lightweight wallet for most users. By default it uses Atrides open node at http://node.moneroclub.com:8880, but you can change the node it uses in the CONFIG.file stored in the My Documents/lightWallet directory; to use a local bitmonerod instance set it as http://localhost:18081. 
 
 **This program is an alpha version, and although I don't think there is really any way to screw up your wallet, please exercise some modicum of caution.**
 
@@ -7,7 +7,7 @@ This is a GUI frontend that runs on top of bitmonerod and simplewallet (in RPC m
 ### Windows, Linux, and Mac
 The requirements for running the program from the source files are: Python 2.7, Kivy 1.8, and pygame 1.9.1. The program is also only intended for windows at the moment; it may be semi-functional on linux or mac, but I don't think it will work properly. If you have these requirements, then you just need to add your binary, simplewallet.exe(currently designed to work only with the latest tagged release),  and optionally wallet files to your cryptonoteRPCwalletGUI folder, or unzip the cryptonoteRPCwalletGUI contents into the folder where you currently have your binaries and wallet files. For the time being they have to be in the same local directory.
 
-If you're using the binary (v0.0.2), there are no requirements other than an x64 Windows computer. 
+If you're using the binary (v0.0.3), there are no requirements other than an x64 Windows computer. 
 
 ## Running
 It should be OK to launch the program with an instance of bitmonerod and/or simplewallet running. 
